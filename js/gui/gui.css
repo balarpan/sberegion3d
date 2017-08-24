@@ -1,0 +1,145 @@
+.guiProgressCont {
+	margin: 1px; padding:1px;
+	border: 1px solid #888;
+	height: 12px; width:100%;
+}
+.guiProgress {
+	margin:0; padding:0;
+	height:100%;
+	width:0;
+	display:block;
+	// background-color: #05059e;
+	background-color: #337ab7;
+}
+
+/* GUI.Window */
+.wnd3d_cnt{ 
+	position:absolute; margin:0; padding:5px;
+	min-width: 40px; min-height: 35px;
+	background: #fff;
+	box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+	font-size: 18px; color:#000; border:1px solid #eee;
+}
+.wnd3d_header_cnt{
+	display:block; position:relative;
+	font-size: 22px; min-height:24px;
+	margin:0; padding: 12px 14px;
+	white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.wnd3d_header{
+	margin:0; padding:5px 9px; cursor:move; 
+	border-bottom: 1px solid #c1c1c1;
+	white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.wnd3d_close_btn{
+	position: absolute; top: 2px; right:2px; font-size: 22px;
+	width:24px; height: 24px; display: inline-block;
+	border-radius: 50%;
+	text-align: center; line-height: 24px;
+	border:0; padding:0; background: none;
+	font-family: 'ElegantIcons';
+	speak: none;
+	font-style: normal;
+	font-weight: normal;
+	font-variant: normal;
+	text-transform: none;
+	-webkit-font-smoothing: antialiased;
+}
+.wnd3d_close_btn:after{ content: "\4d";}
+.wnd3d_close_btn:hover, .wnd3d_close_btn:focus { background: #d7efef; outline: none; }
+
+.wnd3d_body_cnt{ margin:0;padding: 0 9px; }
+.wnd3d_body { min-height: 21px; }
+.wnd3d_footer_cnt{ position:absolute; bottom: 0;left:0; right:0; }
+.wnd3d_footer_cnt > .resize_anchor{
+	position: absolute; bottom:0;right:0;
+	width:10px; height:10px; border:0; margin:0; padding:0;
+	display:inline-block;
+	background: url('gui_img/resize_anchor.png') no-repeat center center;
+	cursor: nw-resize;
+}
+
+
+/* GUI.DataGrid */
+.guiDatagrid_cnt { 
+	margin:0; padding:0; border:0;
+	height:100%;
+	/*display:inline-block;*/
+	box-sizing: border-box;
+	position: relative;
+}
+.guiDatagrid {
+	background:#fff;
+}
+.guiDatagridHeader_cnt { border-bottom: 1px solid #ccc; white-space: nowrap; box-shadow: 0px 3px 13px -3px rgba(0,0,0,0.45); overflow:hidden;}
+.guiDatagridHeader, .guiDatagridHeaderBar {display: inline-block; background-color: #FFF; color: #000; vertical-align: top; color: rgba(0,0,0,.64); }
+.guiDatagridFilter { display:block; width:100%;}
+.guiDatagridFilter:focus { border-color: transparent; border-bottom: 1px solid blue; outline: none;}
+
+.guiDatagridBody_cnt { overflow-y:scroll;}
+.guiDatagridBody {display:table; border-spacing: 0; border-collapse: collapse; border:0; margin:0; padding:0; }
+.guiDatagridRow {
+	border-bottom: 1px solid #ccc;
+	transition: background-color 0.7s cubic-bezier(0.4, 0, 0.2, 1) 0.2s;
+}
+TR.guiDatagridRow:hover, .guiDatagridHeader:hover { background-color: #eee; }
+.guiDatagridCell, .guiDatagridHeader { margin:0; padding:0.5rem 1rem; border:0px solid #a0a0a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.guiDatagridMargin {width:1px; display:block; margin:0;padding:0;border:0;}
+.guiDatagridBusy {
+	position: absolute; top:50%; left:50%;
+	display:inline-block; margin:auto; padding:12px; width:.5rem; height:.5rem;
+	border-radius: 50%;
+	border: .5rem solid rgba(150,150,150,0.1);
+	border-top-color: #bee7f1;
+	border-left-color: #bee7f1;
+	animation: guiLoadingIcoAnim 1s infinite ease-in-out;
+}
+.guiDatagridLaodingLine { position:absolute; left:0; right:0; display:block; }
+
+@keyframes guiLoadingIcoAnim {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+progress.guiProgressLine:not([value]), .guiProgressLine:not([value]):before {
+  height: 3px;
+  width: 100%;
+  margin: 0;
+}
+.guiProgressLine:not([value]) {
+  background-color: #b3d4fc;
+  display: -webkit-flex;
+  display: flex;
+}
+.guiProgressLine:not([value]):before {
+  background-color: #3f51b5;
+  content: '';
+  -webkit-animation: guiProgressLineAnim 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  animation: guiProgressLineAnim 2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+@-webkit-keyframes guiProgressLineAnim {
+  0% { margin-left: 0px; margin-right: 100%; }
+  50% { margin-left: 25%; margin-right: 0%; }
+  100% { margin-left: 100%; margin-right: 0; }
+}
+@keyframes guiProgressLineAnim {
+  0% { margin-left: 0px; margin-right: 100%; }
+  50% { margin-left: 25%; margin-right: 0%; }
+  100% { margin-left: 100%; margin-right: 0; }
+}
+
+/*GUI.PopupMenu*/
+.guiPopupCont { position:absolute; padding:2px; margin:0; color:#111; font-size: 1rem;}
+UL.guiPopup { list-style-type: none; padding:5px 12px; margin:0; border:0; background:#fff; border:1px solid #cacaca; border-radius: 3px; box-shadow: 0 19px 38px rgba(0,0,0,0.30), 0 15px 12px rgba(0,0,0,0.22); }
+LI.guiPopupItem {
+	cursor:pointer;
+	padding:0.1rem 0.6rem;
+	white-space: nowrap;
+	transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s; }
+LI.guiPopupItem:hover { background: #eee; }
+LI.guiPopupItem:hover::first-letter  { color: #bb292d; }
