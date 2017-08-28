@@ -6,8 +6,6 @@
 <title>СБЕРБАНК. Потенциал лесопромышленного комплекса.</title>
 <link rel="stylesheet" href='css/style.css'>
 <script type="text/javascript" src='js/jquery-3.2.1.min.js'></script>
-<script type="text/javascript" src='js/gui/gui.min.js'></script>
-<script type="text/javascript" src='js/qryBuilder.js'></script>
 <style>
     html,
     body,
@@ -31,8 +29,9 @@ var config = {
   // regionRF: "http://services.arcgis.com/HOo89W8RWwrXP286/arcgis/rest/services/GeoFIAS_2016_08/FeatureServer/0"
   regionRF: "https://services.arcgis.com/HOo89W8RWwrXP286/ArcGIS/rest/services/Regions_RF/FeatureServer/1",
   regionDetailed: "https://services.arcgis.com/HOo89W8RWwrXP286/ArcGIS/rest/services/Regions_RF/FeatureServer/0",
-  regionCompanies: "https://services.arcgis.com/HOo89W8RWwrXP286/ArcGIS/rest/services/Regions_RF/FeatureServer/2",
-  globeView: location.search.match(/globeView=([\w\-]+)/) ? RegExp.$1==true : false
+  regionTable: "http://services.arcgis.com/HOo89W8RWwrXP286/ArcGIS/rest/services/%D0%A8%D0%B0%D0%B1%D0%BB%D0%BE%D0%BD_%D1%82%D0%B0%D0%B1%D0%BB%D0%B8%D1%86%D1%8B/FeatureServer/0",
+  globeView: location.search.match(/globeView=([\w\-]+)/) ? RegExp.$1==true : false,
+  regionCode: location.search.match(/regionCode=([\w\-]+)/) ? parseInt(RegExp.$1) : false,
 }
 var path_location = location.href.replace(/\/[^/]+$/, '');
 var dojoConfig = {
@@ -48,18 +47,48 @@ var dojoConfig = {
 <link rel="stylesheet" href="https://js.arcgis.com/4.4/esri/css/main.css">
 <script src="https://js.arcgis.com/4.4/"></script>
 
-<script type="text/javascript" src='js/main.js'></script>
 </head>
 <body>
 
   <div id="viewDiv">
-    <div class='paramsSelectPaneCont'>
-    <div class='paramsSelectPaneHead'>Лесопромышленный комплекс.</div>
-      <div id="paramsSelectPane" class='paramsSelectPane' "></div>
-    </div>
     <div id="mapLoadingProgress" class='mapLoadingProgress progress-line' "></div>
   </div>
   <div id="homeDiv"></div>
+
+<script type="text/javascript">
+'use strict'
+
+require([
+  "esri/Map",
+  "esri/views/MapView",
+  "esri/layers/FeatureLayer",
+  "esri/core/watchUtils",
+  "dojo/domReady!"
+], function(Map, MapView, FeatureLayer,
+  watchUtils
+) {
+
+  var regionsRFLyr = new FeatureLayer({
+    url: config.regionDetailed,
+    // definitionExpression: "Status = 'CBM' OR Status = 'EOR' OR Status = 'GAS' OR Status = 'INJ' OR Status = 'O&G' OR Status = 'OIL' OR Status = 'SWD'",
+    outFields: ["*"],
+    definitionExpression: 'RegionCode='+config.regionCode
+  });
+
+  var map = new Map({
+    basemap: "gray",
+    layers: [regionsRFLyr]
+  });
+
+  var view = new MapView({
+    map: map,  // References a Map instance
+    container: "viewDiv"  // References the ID of a DOM element
+  });  
+
+});
+
+
+</script>
 
 </body>
 </html>

@@ -55,8 +55,24 @@ require([
 
     var regionPopupTemplate = { // autocasts as new PopupTemplate()
       title: "<font color='#008000'>Показатели региона.</font>",
-      content: "<b>Название региона:</b> {NameSub}<br>" +
-        "<b>Параметр1:</b> {DEPTH} meters<br>",
+      content: function(target){
+        var att = target.graphic.attributes;
+        var defer = jQuery.Deferred();
+
+        var ret =  ["<b>Название региона:</b> ", GUI.htmlEscape(att.RegionName), "<br><b>Код Региона:</b> ", GUI.htmlEscape(att.RegionCode), "<br>"]
+        var values = globalCache.getStatforRegion( att.RegionCode )
+        if ( values ) {
+          ret.push("<b>Суммарное значение показателей:</b> " + values.val + "<br><br>Значения всех показателей:<br>");
+          ret.push( GlobalCacheObj.statParamNames.map( function(el, ind){ return "<b>"+GUI.htmlEscape(el.viewName)+"</b>: "+GUI.htmlEscape(globalCache._regionStat[att.RegionCode][ind])+ "<br>"}).join('') )
+        }
+        else
+          ret.push( "<i>Для данного региона показатели не предоставлены.</i>")
+        defer.resolve( ret.join('') )
+
+        return defer;
+      },
+      // content: "<b>Название региона:</b> {RegionName}<br>" +
+      //   "<b>Код Региона:</b> {RegionCode}<br>",
       fieldInfos: [{
         fieldName: "SPUD",
         format: {
@@ -68,10 +84,10 @@ require([
           dateFormat: "short-date"
         }
       }, {
-        fieldName: "DEPTH",
+        fieldName: "RegionCode",
         format: {
           places: 0,
-          digitSeparator: true
+          digitSeparator: false
         }
       }]
     };
@@ -80,7 +96,7 @@ require([
       symbol: new PolygonSymbol3D({
         symbolLayers: [new ExtrudeSymbol3DLayer()] // creates volumetric symbols for polygons that can be extruded
       }),
-      label: "суммарный потенциал",
+      label: "потенциал",
       visualVariables: [{
         type: "size", // indicates this is a size visual variable
         field: regionExtrudeAmount, // a special function will return the height of shape.
@@ -121,7 +137,7 @@ require([
 
     var regionsLabelClass = new LabelClass({
       labelExpressionInfo: {
-        value: "{NameSub}" // Text for labels comes from this field
+        value: "{RegionName}" // Text for labels comes from this field
       },
       symbol: new LabelSymbol3D({
         symbolLayers: [new TextSymbol3DLayer({
@@ -136,33 +152,6 @@ require([
     regionsRFLyr.labelingInfo = [regionsLabelClass];
 
 
-    /********************************************************
-     * The popupTemplate that will populate the content of the
-     * popup when an earthquake feature is selected
-     *******************************************************/
-
-    var quakeTemplate = { // autocasts as new PopupTemplate()
-      title: "{place}",
-      content: "<b>Date and time:</b> {date_evt}<br>" +
-        "<b>Magnitude (0-10): </b> {mag}<br>" +
-        "<b>Depth: </b> {depth} km<br>",
-      fieldInfos: [{
-        fieldName: "date_evt",
-        format: {
-          dateFormat: "short-date-short-time"
-        }
-      }],
-      actions: [{
-        id: "find-wells",
-        title: "Nearby wells"
-      }]
-    };
-
-    /********************************************************
-     * Create earthquakes layers (one on the surface and one
-     * below the surface to show actual location).
-     *******************************************************/
-
     var map = new Map({
       basemap: "gray",
       layers: [regionsRFLyr]
@@ -172,7 +161,7 @@ require([
       container: "viewDiv",
       map: map,
       // Indicates to create a local scene
-      viewingMode: "local",
+      viewingMode: config.globeView ? "global" : "local",
       // Use the exent defined in clippingArea to define the bounds of the scene
       clippingArea: russiaExtent,
       extent: russiaExtent,
@@ -207,7 +196,11 @@ require([
     })
 
     var legend = new Legend({
-      view: view
+      view: view,
+      layerInfos: [{
+      	layer: regionsRFLyr,
+      	title: "Субъекты РФ"
+      }]
     });
     view.ui.add(legend, "bottom-right");
 
@@ -221,10 +214,8 @@ require([
 
     view.popup.on("trigger-action", function(event) {
       if (event.action.id === "viewAt2DMap") {
-        var regionID = view.popup.selectedFeature.attributes.FID;
-
-        document.location.href = window.location.href.substring(0, location.href.lastIndexOf("/")+1) + '/flatmap.html?' + $.param({regionID: regionID, regionName:view.popup.selectedFeature.attributes.NameSub});
-
+        var regionID = view.popup.selectedFeature.attributes.RegionCode;
+        document.location.href = window.location.href.substring(0, location.href.lastIndexOf("/")+1) + '/flatmap.html?' + $.param({regionCode: regionID});
       } else {
         return;
       }
@@ -236,6 +227,21 @@ require([
     }, "homeDiv");
 
   })//end of globalCahce ready Promise
+
+
+  var paramsSelector = new GUI.Carousel({
+    dom_container: 'paramsSelectPane',
+    orientation: 'horizontal',
+    itemCSS: 'paramSelectPaneItem checked',
+    onClick: function(e, userData) {
+      // self._floorSQL = userData
+      $(e.delegateTarget).toggleClass('checked');
+    },
+  })
+  GlobalCacheObj.statParamNames.forEach( function(inParam, index){
+    paramsSelector.addItem( $('<div>'+GUI.htmlEscape(inParam.viewName) +'</div>'), "paramName='"+inParam.sqlName+"'" );
+  })
+
 });
 
 
@@ -248,8 +254,12 @@ This functions is used to compute amount of extrusion of each subregion.
 @return {integer}             - A heigth in meters.
  */
 function regionExtrudeAmount(feat){
-  var inSize=feat.attributes.Shape__Area
-  var outSize = 100 * inSize / globalCache._paramsStat[0].max
+  var v = globalCache.getStatforRegion(feat.attributes.RegionCode);
+  if ( !v )
+    return 0;
+  var inSize = v.val;
+  var max = v.max
+  var outSize = 100* inSize / max
   return parseInt(outSize*5000) //100% = max value = 5 000 menters
 }
 
@@ -259,8 +269,12 @@ This functions is used to compute color of each subregion.
 @return {Array[]}             - Array of color values as described in JS API SDK.
  */
 function regionColor(feat){
-  var inSize=feat.attributes.Shape__Area
-  var outSize = 100 * inSize / globalCache._paramsStat[0].max
+  var v = globalCache.getStatforRegion(feat.attributes.RegionCode);
+  if ( !v )
+    return 0;
+  var inSize = v.val;
+  var max = v.max
+  var outSize = 100 * inSize / max;
 
   return parseInt(outSize)
 }
@@ -271,20 +285,19 @@ function regionColor(feat){
 */
 var GlobalCacheObj = function(options) {
   this._deferArray = {};
-  this._paramsStat = { paramsMinMax:[] };
+  this._regionStat = {};
+  this.uiParamOn = Array(GlobalCacheObj.statParamNames.length).fill(true)
   this.init();
 }
 GlobalCacheObj.prototype = {
   constructor: GlobalCacheObj,
   init: function() {
     this._deferArray = {};
-
-    this.purgeRegionsStatistics();
-    this.getRegionsStatistics();
+    this.purgeregionisStat();
+    this.fetchRegionsStat();
   },
   /*
   Returns deferred which will be resolved when all internal process has been done.
-
   @return [Promise]
    */
   readyPromise: function(){
@@ -296,33 +309,73 @@ GlobalCacheObj.prototype = {
   },
   /*
   Query server for regions parameters statistic. At example min and max values of each params groups.
-
   @return [Promise]
    */
-  getRegionsStatistics: function() {
+  fetchRegionsStat: function() {
+    var statQry = [];
+    var fldPrefix = 'sts';
+    for (var i=0; i<GlobalCacheObj.statParamNames.length; i++){
+      statQry.push( {statisticType: "max", onStatisticField: GlobalCacheObj.statParamNames[i].sqlName, outStatisticFieldName: fldPrefix + i.toString()}, )
+    }
     var params = {
       where: "1=1",
-      outStatistics: '[{statisticType: "min", onStatisticField: "Shape__Area", outStatisticFieldName: "Out_Field_Name1"},' +
-        '{statisticType: "max", onStatisticField: "Shape__Area", outStatisticFieldName: "Out_Field_Name2"}]'
+      groupByFieldsForStatistics: 'RegionCode',
+      outStatistics: JSON.stringify(statQry)
     };
     var defer = jQuery.Deferred();
     this._deferArray.regionsStat =  defer;
+    var _scope = this;
     
-    QryBuilder.qryJSON(config.regionRF + '/query', params).always(
+    QryBuilder.qryJSON(config.regionCompanies + '/query', params).always(
       function(r) {
         if (r.features !== undefined) {
-          this._paramsStat = [{
-            min: r.features[0].attributes.Out_Field_Name1,
-            max: r.features[0].attributes.Out_Field_Name2
-          }]
+          _scope.purgeregionisStat();
+          r.features.forEach( function(row){
+            var att = row.attributes;
+            _scope._regionStat[att.RegionCode] = []
+            for( var i =0; i<GlobalCacheObj.statParamNames.length; i++)
+              _scope._regionStat[att.RegionCode].push( att[fldPrefix + i.toString()] )
+          })
+          //compute max values for normalization in 3D view
+          var max = null;
+          Object.keys(_scope._regionStat).forEach( function(regCode){
+            if ( !max ) {
+              max = _scope._regionStat[regCode];
+              return;
+            }
+            max = max.map( function( current, index ){
+              return current > _scope._regionStat[regCode][index] ? current : _scope._regionStat[regCode][index]
+            })
+          });
+          _scope._regionStat['max'] = max;
 
-          defer.resolve(this._paramsStat)
+          defer.resolve(_scope._regionStat)
         } else {
           defer.reject(r)
         }
       }.bind(this) )
     return defer.promise();
   },
-  purgeRegionsStatistics: function(){ this._paramsStat = null }
+  purgeregionisStat: function(){ this._regionStat = {} },
+  getStatforRegion: function(regCode){
+    if ( this._regionStat && this._regionStat[regCode] ) {
+      var _scope = this;
+      var ret = _scope._regionStat[regCode].filter( function(el, ind){ return _scope.uiParamOn[ind] })
+      if ( !ret.length )
+        return null;
+      ret = ret.reduce( function(sum,val){return sum + val});
+      var retMax = _scope._regionStat['max'].filter( function(el, ind){ return _scope.uiParamOn[ind] }).reduce( function(sum,val){return sum + val});
+      return {val: ret, max: retMax}
+    }
+    else
+      return null
+  },
 }
+/* constants */
+GlobalCacheObj.statParamNames = [];
+for (var i=1; i<=10; i++) {
+  GlobalCacheObj.statParamNames.push( {sqlName: "param" + i.toString(), viewName:"Параметр_" + i.toString() })
+}
+
 var globalCache = new GlobalCacheObj()
+

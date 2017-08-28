@@ -835,6 +835,139 @@ GUI.PopupMenu.prototype = {
 	getMenuBox:function(){ return [ this.left, this.top, this.left  + this.menuWidth, this.top + this.menuHeight ]; },
 }
 
+/**
+ * Carousel with smooth scrolling. Can be vertical or horizaontal oriented.
+ * @class
+ * @constructor
+ * @param {Array[]} in_opt 								- Init params.
+ * @param {string|domID|jQuery.Object} in_opt.dom_container 	- A DOM element, ID of DOM Element or jQuery object.
+ * @param {string} [in_opt.id]							- If you need you can assign to the control desired ID, otherwise id will be generated automatically.
+ * @param {string} [in_opt.orientation='vertical'] 		- Can be 'horizontal' or 'vertical'. Default is 'vertical'
+ * @param {string} [in_opt.itemCSS] 					- Style which will be assigned to each item in Carousel.
+ */
+GUI.Carousel = function ( in_opt ) {
+	/** @constructor */
+	this._opt = $.extend( {
+		dom_container:null, id:null,
+		orientation:'vertical',
+		itemCSS:'',
+		mouseWheelMultiply : 1,
+		onClick:null}, in_opt );
+	this._opt.type = this._opt.orientation==='vertical' ? 'vert' : 'horiz';
+	this._opt.typeCSS = (this._opt.itemCSS.length > 0 ? this._opt.itemCSS+' ' : '')+this._opt.type;
+	if ( !this._opt.id ) this._opt.id=GUI.uuid();
+	this.build();
+};
+GUI.Carousel.prototype = {
+	constructor: GUI.Carousel,
+	build:function() {
+		var parent = GUI.DOMToObject( this._opt.dom_container );
+		var el = $('<div class="Carousel3dcnt '+this._opt.type+'" id="'+this._opt.id.toString()+'"><div class="Carousel3d '+this._opt.type+'"></div></div>');
+		el.disableSelection();
+		if ( null!==parent )
+			parent.append(el);
+		this._dom = el.children().first();
+		this.bindEvents();
+	},
+	bindEvents: function(){
+		this._dom.on('mousewheel', this.onMouseWheel.bind(this) );
+	},
+	unbindEvents: function(){ this._dom.off(); },
+	onMouseWheel: function(event){
+		var dist = event.deltaFactor * event.deltaY  * this._opt.mouseWheelMultiply;
+		this.scrollBy( 0-dist );
+	},
+	scrollBy: function( scrollDelta ){
+		if ( 0===scrollDelta )
+			return;
+		this._dom.stop( true );
+		var vert = this.isVertical;
+		var size = vert ? this._dom.parent().height() : this._dom.parent().width(), viewStart = vert ? 0-parseInt(this._dom.css('top')) : 0-parseInt(this._dom.css('left')), viewCenter = viewStart + size/2;
+		var space = vert ? this._dom.height() : this._dom.get(0).scrollWidth;
+
+		var delta = parseInt( GUI.clamp( viewStart + scrollDelta, 0, space-size ) );
+		delta = delta - viewStart;
+		if ( 0!== delta ){
+			var anim = vert ? {'top':'-='+delta+'px'} : {'left':'-='+delta+'px'};
+			this._dom.animate(
+				anim,
+				{
+					'duration': parseInt( Math.abs(delta)/1200*1000) , //speed = 1200 pixels per second + compensation for dist<50px (actual for easing=swing)
+					'queue': false,
+					'easing':'linear',
+				});
+		}
+	},
+	/**
+	 * Add itme to Carousel.
+	 * @param {DOM|string} in_it   Can be dom element. html string or jQuery dom element.
+	 * @param {any} in_data 		Any data that will be assigned to the element and can be letter used viq jQuery data() function.
+	 */
+	addItem:function( in_it, in_data ) {
+		var self = this;
+		var item = $(in_it);
+		var el = $('<div class="Carousel3dItem inactive '+this._opt.typeCSS+'">');
+		el.click( self.itemClick.bind(self) );
+		this._dom.append( el.append( item ) );
+		var ret = this._dom.children().length -1;
+		el.data( {num:ret, userData:in_data} );
+		return ret;
+	},
+	itemClick: function(e) {
+		e.preventDefault();
+
+		var el = $(e.delegateTarget);
+		this.selectItem( el.data().num );
+
+		if( "function"===typeof(this._opt.onClick) ) {
+			this._opt.onClick.call( this, e, el.data().userData );
+		} 
+	},
+	selectItem: function( itemNumber ) {
+		if ( 0>itemNumber || itemNumber > this.itemsCount - 1 )
+			return;
+		var self = this;
+		var vert = this.isVertical;
+		this._dom.stop( true );
+		var el = this.getItem(itemNumber), num = el.data().num+1, size = vert ? this._dom.parent().height() : this._dom.parent().width(), itemSize = vert ? el.outerHeight() : el.outerWidth();
+		itemSize += vert ? (parseInt( el.css('margin-bottom') ) + parseInt( el.css('margin-top') )) : (parseInt( el.css('margin-left') )+parseInt( el.css('margin-right') ));
+		var itemStart = vert ? el.position().top : el.position().left, itemStop = itemStart + itemSize;
+		var viewStart = vert ? 0-parseInt(self._dom.css('top')) : 0-parseInt(self._dom.css('left')), viewCenter = viewStart + size/2;
+		var deltaToCenter = itemStart - viewCenter + itemSize/2, space = vert ? this._dom.height() : this._dom.get(0).scrollWidth;
+
+		this._dom.children().removeClass('active').addClass('inactive');
+		el.removeClass('inactive').addClass('active');
+
+		if ( viewStart+deltaToCenter > space-size ) {
+			deltaToCenter = (space-size) - viewStart;
+		}
+		if ( viewStart+deltaToCenter < 0 ) {
+			deltaToCenter = 0 - viewStart;
+		}
+		deltaToCenter = parseInt( deltaToCenter );
+
+		//only if item is smaller than container we move Item to center 
+		if ( itemSize < size) {
+			var anim = vert ? {'top':'-='+deltaToCenter+'px'} : {'left':'-='+deltaToCenter+'px'};
+			this._dom.animate(
+				anim,
+				{
+					'duration': parseInt( Math.abs(deltaToCenter)/300*1000) + parseInt(50/Math.abs(deltaToCenter)*1000), //speed = 300 pixels per second + compensation for dist<50px (actual for easing=swing)
+					'queue': false,
+					// 'easing':'linear',
+				});
+		}
+	},
+	getItem: function( itemNumber ) { return $(this._dom.children()[itemNumber]); },
+	getUserData: function( itemNumber ) { return this.getItem(itemNumber).data().userData; },
+	//return true if orientation of Carousel is vertical
+	get isVertical() {
+		return this._opt.type === 'vert';
+	},
+	get itemsCount() { return this._dom.children().length; },
+};
+
+
 //Static variables
 // next free DOM ID value @static
 GUI.nextID = 0;
@@ -905,7 +1038,7 @@ GUI.getScrollbarWidthHeight = function() {
     return GUI.getScrollbarWidthHeight.result;
 }
 GUI.htmlEscape = function( txt ) { return $("<div />").text(txt).html() }
-//You can pass to a function a DOM element, ID of DOM Element or jQuery object
+//You can pass to this function a DOM element, ID of DOM Element or jQuery object
 //return always  jQuery object or document.body in case of incorrect input params 
 GUI.DOMToObject = function ( in_v ) {
 	var ret;
@@ -944,11 +1077,17 @@ GUI.debug = function() { console.debug.apply( console, arguments ); };
 			// 	css: ['style.min.css']
 			// },
 			//jScrollPane recomended jQuery mouseweel and  mwheelIntent plugins for mousewheel support
-			// jQueryMousewheel: {
-			// 	credits: "https://github.com/jquery/jquery-mousewheel",
-			// 	folder: 'mousewheel',
-			// 	js: ['jquery.mousewheel.js', 'mwheelIntent.js'],
-			// 	css: []
+			jQueryMousewheel: {
+				credits: "https://github.com/jquery/jquery-mousewheel",
+				folder: 'mousewheel',
+				js: ['jquery.mousewheel.js', 'mwheelIntent.js'],
+				css: []
+			},
+			// jScrollPane:{
+			// 	credits:'http://jscrollpane.kelvinluck.com/',
+			// 	folder: 'jScrollPane',
+			// 	js:['jquery.jscrollpane.min.js'],
+			// 	css:['jquery.jscrollpane.css'],
 			// },
 			// PrintArea: {
 			// 	credits: 'http://jquery-print.ssdtutorials.com/',

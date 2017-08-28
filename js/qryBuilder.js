@@ -116,7 +116,7 @@ QryBuilder.qryJSON = function( url, data, params ) {
  * Calculate extent for individual feature from JSON query response
  * @param  {!featureJSON} featureJSON - feature itself.
  * @param  {!string} geometryTypeEsri - esri type of geometry ( esriGeometryPoint | esriGeometryPolyline | esriGeometryPolygon).
- * @param  {boolean} [isWebMercator = flase] - Indicates thet coordinates is a WebMercator. In this case used builtIn function to quick convert from XY to Lon/Lat.
+ * @param  {boolean} [isWebMercator = flase] - Indicates that coordinates is a WebMercator. In this case used builtIn function to quick convert from XY to Lon/Lat.
  * @return {false | {min:number[], max:number[] }	- UL and DR corners.
  */
 QryBuilder.computeExtent = function( featureJSON, geometryTypeEsri, isWebMercator ) {
@@ -155,7 +155,7 @@ QryBuilder.computeExtent = function( featureJSON, geometryTypeEsri, isWebMercato
 
 }
 /**
- * convert result returned from Esri Draw toolbar into object copliant for Esri REST API @see {@link http://resources.arcgis.com/en/help/arcgis-rest-api/index.html#/Buffer/02r3000000s5000000/}
+ * convert result returned from Esri Draw toolbar into object compliant for Esri REST API @see {@link http://resources.arcgis.com/en/help/arcgis-rest-api/index.html#/Buffer/02r3000000s5000000/}
  * @param  {!Object} inGeom 	- value returned from draw toolbar when drawing is done
  * @return { {geom: {geometryType:string, geometries:Array[]}, wkid:number} } 
  * @static

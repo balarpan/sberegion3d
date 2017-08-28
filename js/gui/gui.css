@@ -143,3 +143,13 @@ LI.guiPopupItem {
 	transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s; }
 LI.guiPopupItem:hover { background: #eee; }
 LI.guiPopupItem:hover::first-letter  { color: #bb292d; }
+
+.Carousel3dcnt { background: none;border:1px solid transparent; padding:0; margin:0; overflow:hidden; }
+.Carousel3dcnt.horiz { position:absolute; left:0; right:0; top:0; }
+.Carousel3dcnt.vert { position:absolute; top:0; bottom:0;}
+.Carousel3d { position:relative; margin:0; padding:0; }
+.Carousel3d.horiz { left:0; right:0; white-space: nowrap;}
+.Carousel3d.vert { top:0; bottom:0; overflow:hidden;}
+/*.Carousel3dItem { }*/
+.Carousel3dItem.horiz { display:inline-block; margin: 1px 4px;}
+.Carousel3dItem.vert {  display:block; margin: 10px 1px 10px 1px; }
