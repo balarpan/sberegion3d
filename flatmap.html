@@ -62,10 +62,12 @@ require([
   "esri/Map",
   "esri/views/MapView",
   "esri/layers/FeatureLayer",
-  "esri/core/watchUtils",
+  "esri/core/watchUtils", "esri/renderers/SimpleRenderer", "esri/symbols/SimpleFillSymbol",
+  "esri/Basemap","esri/layers/TileLayer",
   "dojo/domReady!"
 ], function(Map, MapView, FeatureLayer,
-  watchUtils
+  watchUtils, SimpleRenderer, SimpleFillSymbol,
+  Basemap, TileLayer
 ) {
 
   var companiesPopupTemplate = { // autocasts as new PopupTemplate()
@@ -94,11 +96,21 @@ require([
     }]
   };
 
+  var borderRender = new SimpleRenderer({
+    label: "Границы региона",
+    symbol: new SimpleFillSymbol({
+      color: [ 205, 219, 202, 0.5 ], style: "solid", outline:{
+        color: "000000", width: 1
+      }
+    })
+  })
+
   var regionsRFLyr = new FeatureLayer({
     url: config.regionDetailed,
     // definitionExpression: "Status = 'CBM' OR Status = 'EOR' OR Status = 'GAS' OR Status = 'INJ' OR Status = 'O&G' OR Status = 'OIL' OR Status = 'SWD'",
     outFields: ["*"],
-    definitionExpression: 'RegionCode='+config.regionCode
+    definitionExpression: 'RegionCode='+config.regionCode,
+    renderer: borderRender
   });
   var companiesLyr = new FeatureLayer({
     url: config.regionCompanies,
@@ -107,15 +119,35 @@ require([
     definitionExpression: 'RegionCode='+config.regionCode,
     popupTemplate: companiesPopupTemplate,
   });
+  var russiaExtent = {
+    xmax: 20037507, xmin: 2226522,
+    ymax: 16854341, ymin: 2216059,
+    spatialReference: { // autocasts as new SpatialReference()
+      wkid: 3857
+    }
+  };
+  var a1 = new TileLayer({url:"http://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/BaseMap/MapServer"});
+  var pkk5Basemap = new Basemap({
+    baseLayers: [
+      a1,
+      // new TileLayer({url:"https://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/Anno/MapServer"}),
+    ],
+    title: "Базовая карта РФ",
+    id: "pkk5"
+  });
+
 
   var map = new Map({
-    basemap: "gray",
+    // basemap: "topo",
+    basemap: pkk5Basemap,
     layers: [regionsRFLyr, companiesLyr ]
   });
 
   var view = new MapView({
-    map: map,  // References a Map instance
-    container: "viewDiv"  // References the ID of a DOM element
+    map: map,
+    container: "viewDiv",
+    constraints: { rotationEnabled: false },
+    extent: russiaExtent
   });
 
 });
