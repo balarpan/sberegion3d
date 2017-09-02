@@ -126,11 +126,10 @@ require([
       wkid: 3857
     }
   };
-  var a1 = new TileLayer({url:"https://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/BaseMap/MapServer"});
   var pkk5Basemap = new Basemap({
     baseLayers: [
-      a1,
-      // new TileLayer({url:"https://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/Anno/MapServer"}),
+      new TileLayer({url:"https://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/BaseMap/MapServer"}),
+      new TileLayer({url:"https://pkk5.rosreestr.ru/arcgis/rest/services/BaseMaps/Anno/MapServer"}),
     ],
     title: "Базовая карта РФ",
     id: "pkk5"
