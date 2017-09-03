@@ -25,19 +25,20 @@ require([
   "esri/symbols/PolygonSymbol3D",
   "esri/symbols/ExtrudeSymbol3DLayer",
   "esri/widgets/Legend",
-  "esri/tasks/QueryTask",
-  "esri/tasks/support/Query",
-  "esri/widgets/Home",
+  "esri/widgets/Home", "esri/widgets/Expand", "esri/widgets/BasemapGallery", 
   "esri/symbols/TextSymbol3DLayer",
   "esri/symbols/LabelSymbol3D",
   "esri/layers/support/LabelClass", "esri/Color",
-  "esri/core/watchUtils",
+  "esri/core/watchUtils", "esri/views/3d/externalRenderers",
+  "dojo/dom-construct",
   "dojo/domReady!"
 ], function(Map, SceneView, FeatureLayer,
   SimpleRenderer, ObjectSymbol3DLayer,
-  IconSymbol3DLayer, PolygonSymbol3D, ExtrudeSymbol3DLayer, Legend, QueryTask, Query, Home,
+  IconSymbol3DLayer, PolygonSymbol3D, ExtrudeSymbol3DLayer, Legend,
+  Home, Expand, BasemapGallery,
   TextSymbol3DLayer, LabelSymbol3D, LabelClass, Color,
-  watchUtils
+  watchUtils, externalRenderers,
+  domConstruct
 ) {
 
   globalCache.readyPromise().then( function(){
@@ -59,17 +60,36 @@ require([
         var att = target.graphic.attributes;
         var defer = jQuery.Deferred();
 
-        var ret =  ["<b>Название региона:</b> ", GUI.htmlEscape(att.RegionName), "<br><b>Код Региона:</b> ", GUI.htmlEscape(att.RegionCode), "<br>"]
+        var ret =  [GUI.htmlEscape(att.RegionName), "&nbsp;&nbsp;<b>Код Региона:</b> ", GUI.htmlEscape(att.RegionCode), "<br>"]
         var values = globalCache.getStatforRegion( att.RegionCode )
         if ( values ) {
-          ret.push("<b>Суммарное значение показателей:</b> " + values.val + "<br><br>Значения всех показателей:<br>");
+          ret.push('<div class="popupTabs"> <button class="popupTablinks active" onclick="$(\'#popupTab1\').show(); $(\'#popupTab2\').hide(); $(this).siblings().removeClass(\'active\'); $(this).addClass(\'active\');">Диаграмма показателей</button>\
+            <button class="popupTablinks" onclick="$(\'#popupTab1\').hide().removeClass(\'active\'); $(\'#popupTab2\').show(); $(this).siblings().removeClass(\'active\'); $(this).addClass(\'active\');">Таблица показателей</button></div>')
+
+          $('#popupPieCont').remove();
+          ret.push('<div id="popupTab1" class="popupTabcontent" style="display:block;"><canvas id="popupPieCont" width="300" height="150"></canvas></div>');
+
+          ret.push("<div id='popupTab2' class='popupTabcontent'><b>Суммарное значение показателей:</b> " + values.val + "<br><br>Значения всех показателей:<br>");
           ret.push( GlobalCacheObj.statParamNames.map( function(el, ind){ return "<b>"+GUI.htmlEscape(el.viewName)+"</b>: "+GUI.htmlEscape(globalCache._regionStat[att.RegionCode][ind])+ "<br>"}).join('') )
+          ret.push("</div>")
         }
         else
           ret.push( "<i>Для данного региона показатели не предоставлены.</i>")
-        defer.resolve( ret.join('') )
 
-        return defer;
+        console.debug( ret)
+        ret = $('<div/>').html( ret.join('') )
+        if( values ){
+          try {
+            regionPieChart( att.RegionCode,  ret.find('canvas').get(0).getContext("2d") )
+          }
+          catch(err){
+            console.debug(err)
+          }
+        }
+
+        // defer.resolve( ret )
+        // return defer;
+        return ret.get(0);
       },
       // content: "<b>Название региона:</b> {RegionName}<br>" +
       //   "<b>Код Региона:</b> {RegionCode}<br>",
@@ -157,7 +177,7 @@ require([
       layers: [regionsRFLyr]
     });
 
-    var view = new SceneView({
+    var viewParams = {
       container: "viewDiv",
       map: map,
       // Indicates to create a local scene
@@ -185,7 +205,34 @@ require([
         dockEnabled: false,
         dockOptions: { buttonEnabled: true, breakpoint: false}
       }
-    });
+    };
+    if ( !config.globeView )
+      viewParams.camera= {
+        position:[
+        92.5, //lon
+        -62.5, //latitude
+        12188173 //elevation
+        ],
+        heading:1.96,
+        tilt:57
+      }
+
+    var view = new SceneView(viewParams);
+
+    // var myExternalRenderer = {
+    //   vbo: null,
+    //   setup: function(context) {
+    //     var a = 1; //alpha
+    //     context.gl.clearColor(1 * a, 1*a, 1*a, a);
+    //   },
+    //   render: function(context) {
+    //     // bind a shader program etc.
+    //     var a = 1; //alpha
+    //     context.gl.clearColor(0.5 * a, 0.5*a, 0.5*a, a);
+    //     context.gl.clear(context.gl.COLOR_BUFFER_BIT)
+    //   }
+    // }
+    // externalRenderers.add(view, myExternalRenderer);
 
     watchUtils.watch(view, "updating", function(){
       $("#mapLoadingProgress").stop();
@@ -214,8 +261,8 @@ require([
 
     view.popup.on("trigger-action", function(event) {
       if (event.action.id === "viewAt2DMap") {
-        var regionID = view.popup.selectedFeature.attributes.RegionCode;
-        document.location.href = window.location.href.substring(0, location.href.lastIndexOf("/")+1) + '/flatmap.html?' + $.param({regionCode: regionID});
+        config.callParams.regionCode = view.popup.selectedFeature.attributes.RegionCode;
+        document.location.href = window.location.href.substring(0, location.href.lastIndexOf("/")+1) + './flatmap.html?' + $.param(config.callParams);
       } else {
         return;
       }
@@ -225,6 +272,23 @@ require([
     var homeBtn = new Home({
       view: view
     }, "homeDiv");
+
+    view.ui.add('globeView', 'top-left');
+    watchUtils.watch(view, "ready", function(){
+      $('#globeView').click(function(e){ e.stopPropagation(); config.callParams.globeView = !config.globeView; window.location.href='./index.html?' + $.param(config.callParams)})
+    });
+    //basemam toggle with expand widget
+    var basemapGallery = new BasemapGallery({
+      view: view,
+      container: document.createElement("div")
+    });
+    var bgExpand = new Expand({
+      view: view,
+      content: basemapGallery.domNode,
+      expandIconClass: "esri-icon-basemap",
+      expandTooltip: "Базовая карта", autoCollapse:true
+    });
+    view.ui.add(bgExpand, "top-left");
 
   })//end of globalCahce ready Promise
 
@@ -241,6 +305,7 @@ require([
   GlobalCacheObj.statParamNames.forEach( function(inParam, index){
     paramsSelector.addItem( $('<div>'+GUI.htmlEscape(inParam.viewName) +'</div>'), "paramName='"+inParam.sqlName+"'" );
   })
+
 
 });
 
@@ -277,6 +342,35 @@ function regionColor(feat){
   var outSize = 100 * inSize / max;
 
   return parseInt(outSize)
+}
+/**
+ * Create a 
+ * @param  {Number} regCode   Unique code of the region.
+ * @param  {[type]} ctx       Canvas 2D context same as result of function canvas..getContext("2d")
+ * @return {[type]}         [description]
+ */
+function regionPieChart( regCode, ctx ){
+  var grd = new GUI.Gradient({
+    colorStart:'#4854f8',
+    colorEnd: '#aafe99'}
+    ), valuesLen = GlobalCacheObj.statParamNames.length;
+  var myPieChart = new Chart(ctx,{
+    type: 'pie',
+    data: {
+      datasets: [{
+        data:GlobalCacheObj.statParamNames.map( function(el, ind){ return globalCache._regionStat[regCode][ind]; }),
+        backgroundColor: Array(valuesLen).fill(undefined).map( function(el,ind){ return grd.getRGBstring(ind/valuesLen)}),
+        borderWidth: 1,
+        hoverBorderColor: 'rgba(128,128,128,0.3)',
+        // hoverBorderColor: 'rgba(0,0,0,0)'
+      }],
+      labels: GlobalCacheObj.statParamNames.map( function(el, ind){ return GUI.htmlEscape(el.viewName); }),
+    },
+    options: {
+      responsive: true,
+      legend: {position: 'right'},
+    }
+});
 }
 
 /*
