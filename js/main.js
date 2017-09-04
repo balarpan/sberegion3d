@@ -30,7 +30,6 @@ require([
   "esri/symbols/LabelSymbol3D",
   "esri/layers/support/LabelClass", "esri/Color",
   "esri/core/watchUtils", "esri/views/3d/externalRenderers",
-  "dojo/dom-construct",
   "dojo/domReady!"
 ], function(Map, SceneView, FeatureLayer,
   SimpleRenderer, ObjectSymbol3DLayer,
@@ -38,7 +37,6 @@ require([
   Home, Expand, BasemapGallery,
   TextSymbol3DLayer, LabelSymbol3D, LabelClass, Color,
   watchUtils, externalRenderers,
-  domConstruct
 ) {
 
   globalCache.readyPromise().then( function(){
@@ -60,7 +58,7 @@ require([
         var att = target.graphic.attributes;
         var defer = jQuery.Deferred();
 
-        var ret =  [GUI.htmlEscape(att.RegionName), "&nbsp;&nbsp;<b>Код Региона:</b> ", GUI.htmlEscape(att.RegionCode), "<br>"]
+        var ret =  ['<b style="color:#008000; font-size:14px;">', GUI.htmlEscape(att.RegionName), "</b>&nbsp;&nbsp;Код Региона:<b> ", GUI.htmlEscape(att.RegionCode), "</b><br>"]
         var values = globalCache.getStatforRegion( att.RegionCode )
         if ( values ) {
           ret.push('<div class="popupTabs"> <button class="popupTablinks active" onclick="$(\'#popupTab1\').show(); $(\'#popupTab2\').hide(); $(this).siblings().removeClass(\'active\'); $(this).addClass(\'active\');">Диаграмма показателей</button>\
@@ -76,7 +74,6 @@ require([
         else
           ret.push( "<i>Для данного региона показатели не предоставлены.</i>")
 
-        console.debug( ret)
         ret = $('<div/>').html( ret.join('') )
         if( values ){
           try {
@@ -290,28 +287,46 @@ require([
     });
     view.ui.add(bgExpand, "top-left");
 
+    //Now check if we have selected region in url params. Do it after all other downloading processes are done.
+    if ("regionCode" in config.callParams && Number.isInteger(parseInt(config.callParams.regionCode,10)) ){
+    	view.whenLayerView(regionsRFLyr).then(function(lyrView) {
+    		lyrView.watch("updating", function(val) {
+    			if (val) {
+    				return; // wait for the layer view to finish updating
+    			}
+		    	var qryParams = regionsRFLyr.createQuery();
+		    	qryParams.where = qryParams.where + (qryParams.where.length ? " AND " : "") +"RegionCode=" + parseInt(config.callParams.regionCode,10);
+		    	regionsRFLyr.queryFeatures(qryParams).then(function(results){
+		    		view.popup.open({
+		    			features: [results.features[0]],
+		    			location: results.features[0].geometry.centroid
+		    		});
+		    	}).otherwise(function(err){ console.debug(err) });
+		    });//end of watch "updating"
+	    });//end of whenlayerView
+    }
+
+    var paramsSelector = new GUI.Carousel({
+      dom_container: 'paramsSelectPane',
+      orientation: 'horizontal',
+      itemCSS: 'paramSelectPaneItem checked',
+      onClick: function(e, userData) {
+        // self._floorSQL = userData
+        $(e.delegateTarget).toggleClass('checked');
+        globalCache.uiParamOn[userData.index] = !globalCache.uiParamOn[userData.index];
+        regionsRFLyr.definitionExpression = regionsRFLyr.definitionExpression ? null : "1=1";
+      },
+    })
+    GlobalCacheObj.statParamNames.forEach( function(inParam, index){
+      paramsSelector.addItem( $('<div>'+GUI.htmlEscape(inParam.viewName) +'</div>'), {paramName:inParam.sqlName, index:index} );
+    })
+
   })//end of globalCahce ready Promise
-
-
-  var paramsSelector = new GUI.Carousel({
-    dom_container: 'paramsSelectPane',
-    orientation: 'horizontal',
-    itemCSS: 'paramSelectPaneItem checked',
-    onClick: function(e, userData) {
-      // self._floorSQL = userData
-      $(e.delegateTarget).toggleClass('checked');
-    },
-  })
-  GlobalCacheObj.statParamNames.forEach( function(inParam, index){
-    paramsSelector.addItem( $('<div>'+GUI.htmlEscape(inParam.viewName) +'</div>'), "paramName='"+inParam.sqlName+"'" );
-  })
-
 
 });
 
 
-//This is a helper functions.
-//
+//Below is a helper functions and JS Objects.
 
 /*
 This functions is used to compute amount of extrusion of each subregion.
