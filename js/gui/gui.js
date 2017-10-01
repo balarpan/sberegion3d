@@ -1136,12 +1136,12 @@ GUI.debug = function() { console.debug.apply( console, arguments ); };
 	var defaults = {
 		plugins: {
 			// ICONS Font
-			// ElegantFont: {
-			// 	credits: "https://www.elegantthemes.com/blog/resources/elegant-icon-font",
-			// 	folder: 'elegant_font',
-			// 	js: [],
-			// 	css: ['style.min.css']
-			// },
+			ElegantFont: {
+				credits: "https://www.elegantthemes.com/blog/resources/elegant-icon-font",
+				folder: 'elegant_font',
+				js: [],
+				css: ['style.min.css']
+			},
 			//jScrollPane recomended jQuery mouseweel and  mwheelIntent plugins for mousewheel support
 			jQueryMousewheel: {
 				credits: "https://github.com/jquery/jquery-mousewheel",

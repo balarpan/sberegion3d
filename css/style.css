@@ -126,3 +126,70 @@ keyframes loadingIcoAnim {
   border-left-color: #bee7f1;
   animation: loadingIcoAnim 1s infinite linear;
 }
+
+/* flareclusters animation. See https://github.com/nickcam/FlareClusterLayer */
+
+/* Some rules to change the appearance of clusters and it's text when activated */
+/* Scale up the clusters when activated */
+.cluster-group.activated {
+    transform-origin: center;
+    transform: scale(1.2);
+    transition: transform linear 0.4s;
+}
+    /* Change the appearance of clusters when activated */
+    .cluster-group.activated .cluster {
+        stroke: rgba(255,255,255,1);
+        stroke-width: 2;
+        transition: all ease 1s;
+    }
+    .cluster-group.activated .cluster-text {
+        fill: #000;
+        font-weight: bold;
+        transition: all ease 1s;
+    }
+/* hide flares by default */
+.flare-group {
+    opacity: 0;
+}
+    /* animate display of flares */
+    .flare-group.activated {
+        opacity: 1;
+        transition: opacity linear 0.06s;
+    }
+        /* this just chains the display of flares to occur one after the other using transition delay - could be a better way to do this natively but using SASS or LESS this would be much more concise */
+        .flare-group.activated:nth-of-type(1) {
+            transition-delay: 0.06s;
+        }
+        .flare-group.activated:nth-of-type(2) {
+            transition-delay: 0.12s;
+        }
+        .flare-group.activated:nth-of-type(3) {
+            transition-delay: 0.18s;
+        }
+        .flare-group.activated:nth-of-type(4) {
+            transition-delay: 0.24s;
+        }
+        .flare-group.activated:nth-of-type(5) {
+            transition-delay: 0.30s;
+        }
+        .flare-group.activated:nth-of-type(6) {
+            transition-delay: 0.36s;
+        }
+.cluster-group .flare-group.activated:nth-of-type(7) {
+    transition-delay: 0.42s;
+}
+
+.flare-group.activated:nth-of-type(8) {
+    transition-delay: 0.48s;
+}
+/*
+    Cross browser notes on the example CSS animations:
+    IE/Edge: These POS's don't support transforms on svg elements using css, so the css transform animations won't work.
+*/
+
+.link2OverviewMap {display:block; width:100%; text-align: right; padding: 0.8em 1em 0.5em; }
+.link2OverviewMap:hover{ color:#006e2e; }
+.link2OverviewMap:hover:before {content:"→"; }
+#regionsList{ max-height: 250px; overflow:auto; list-style-type: none; background:#ffffff; margin:0; padding:0;}
+#regionsList li {padding:3px 12px; display:block; white-space:nowrap;}
+#regionsList li:hover { background-color: #eee; }

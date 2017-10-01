@@ -315,7 +315,7 @@ require([
         $(e.delegateTarget).toggleClass('checked');
         globalCache.uiParamOn[userData.index] = !globalCache.uiParamOn[userData.index];
         regionsRFLyr.definitionExpression = regionsRFLyr.definitionExpression ? null : "1=1";
-      },
+       },
     })
     GlobalCacheObj.statParamNames.forEach( function(inParam, index){
       paramsSelector.addItem( $('<div>'+GUI.htmlEscape(inParam.viewName) +'</div>'), {paramName:inParam.sqlName, index:index} );
